@@ -7,7 +7,11 @@
 
 namespace QRcode
 {
-    const int N=10000;
+    void addcode(bool* s,int n,const int x)
+    {
+        for(int i=0;i<n;i++)
+            s[i]=(x>>(n-1-i))&1;
+    }
 
     void addcode(bool* s,const char* code)
     {
@@ -18,8 +22,11 @@ namespace QRcode
 
     unsigned short* encode(int indicator_bits,int bits_len,char* input)
     {
-        static bool bits[N];
-        static unsigned short code[N];
+        static bool* bits;
+        static unsigned short* code;
+        int code_len=1+indicator_bits/8+bits_len;
+        bits=new bool[8*code_len];
+        code=new unsigned short[code_len];
         addcode(bits,"0100");
         int n=strlen(input);
         for(int i=0;i<indicator_bits;i++)
@@ -36,7 +43,6 @@ namespace QRcode
         for(int i=0;i<bits_len-n;i++)
             if(i&1) addcode(bits+cur+i*8,"00010001");
             else addcode(bits+cur+i*8,"11101100");
-        int code_len=1+indicator_bits+bits_len;
         for(int i=0;i<code_len;i++)
         {
             code[i]=0;
@@ -46,24 +52,63 @@ namespace QRcode
         return code;
     }
 
+    unsigned short* get_data(unsigned short* code,int block_num,const int* block_len,int rsc_len,int tot_len)
+    {
+        unsigned short* codeblock[block_num];
+        unsigned short* errorblock[block_num];
+        for(int i=0,cur=0;i<block_num;i++)
+        {
+            codeblock[i]=new unsigned short[block_len[i]];
+            for(int j=0;j<block_len[i];j++)
+                codeblock[i][j]=code[cur++];
+            errorblock[i]=RScode::encode(codeblock[i],block_len[i],rsc_len);
+        }
+        unsigned short* data;
+        data=new unsigned short[tot_len];
+        int it=0;
+        for(int j=0;j<block_len[0];j++)
+            for(int i=0;i<block_num;i++)
+                data[it++]=codeblock[i][j];
+        for(int i=0;i<block_num;i++)
+            if(block_len[i]>block_len[0])
+                data[it++]=codeblock[i][block_len[i]-1];
+        for(int j=0;j<rsc_len;j++)
+            for(int i=0;i<block_num;i++)
+                data[it++]=errorblock[i][j];
+        return data;
+    }
+
     void version_1L(char* input)
     {
         unsigned short* code=encode(8,17,input);
-        int n=19;
         RScode::Galois_init(285,8);
-        unsigned short* rsc=RScode::encode(code,19,7);
-        unsigned short data[26];
-        for(int i=0;i<19;i++) data[i]=code[i];
-        for(int i=0;i<7;i++) data[19+i]=rsc[i];
+        const int block_num[]={19};
+        unsigned short* data=get_data(code,1,block_num,7,26);
         QRmatrix Q(21);
         Q.draw_data(data,26);
         int maskid=Q.masking();
         bool format_msg[15];
-        format_msg[0]=0;
-        format_msg[1]=1;
-        format_msg[2]=(maskid>>2)&1;
-        format_msg[3]=(maskid>>1)&1;
-        format_msg[4]=(maskid>>0)&1;
+        addcode(format_msg,5,1<<3|maskid);
+        bool* bch=BCHcode::encode(format_msg);
+        Q.draw_format(bch);
+        Q.draw();
+    }
+
+    void version_7H(char *input)
+    {
+        unsigned short* code=encode(8,64,input);
+        RScode::Galois_init(285,8);
+        const int block_num[]={13,13,13,13,14};
+        unsigned short* data=get_data(code,5,block_num,26,196);
+        QRmatrix Q(45);
+        const int center[]={6,22,38};
+        Q.draw_centers(3,center);
+        const bool version_msg[]={0,0,0,1,1,1,1,1,0,0,1,0,0,1,0,1,0,0};
+        Q.draw_version(version_msg);
+        Q.draw_data(data,196);
+        int maskid=Q.masking();
+        bool format_msg[15];
+        addcode(format_msg,5,2<<3|maskid);
         bool* bch=BCHcode::encode(format_msg);
         Q.draw_format(bch);
         Q.draw();
@@ -71,5 +116,63 @@ namespace QRcode
 
     void version_10Q(char* input)
     {
+        unsigned short* code=encode(16,151,input);
+        RScode::Galois_init(285,8);
+        const int block_num[]={19,19,19,19,19,19,20,20};
+        unsigned short* data=get_data(code,8,block_num,24,346);
+        QRmatrix Q(57);
+        const int center[]={6,28,50};
+        Q.draw_centers(3,center);
+        const bool version_msg[]={0,0,1,0,1,0,0,1,0,0,1,1,0,1,0,0,1,1};
+        Q.draw_version(version_msg);
+        Q.draw_data(data,346);
+        int maskid=Q.masking();
+        bool format_msg[15];
+        addcode(format_msg,5,3<<3|maskid);
+        bool* bch=BCHcode::encode(format_msg);
+        Q.draw_format(bch);
+        Q.draw();
+    }
+
+    void version_15Q(char* input)
+    {
+        unsigned short* code=encode(16,292,input);
+        RScode::Galois_init(285,8);
+        const int block_num[]={24,24,24,24,24,25,25,25,25,25,25,25};
+        unsigned short* data=get_data(code,12,block_num,30,655);
+        QRmatrix Q(77);
+        const int center[]={6,26,48,70};
+        Q.draw_centers(4,center);
+        const bool version_msg[]={0,0,1,1,1,1,1,0,0,1,0,0,1,0,1,0,0,0};
+        Q.draw_version(version_msg);
+        Q.draw_data(data,655);
+        int maskid=Q.masking();
+        bool format_msg[15];
+        addcode(format_msg,5,3<<3|maskid);
+        bool* bch=BCHcode::encode(format_msg);
+        Q.draw_format(bch);
+        Q.draw();
+    }
+
+    void version_40M(char* input)
+    {
+        unsigned short* code=encode(16,2331,input);
+        RScode::Galois_init(285,8);
+        int block_num[49];
+        for(int i=0;i<18;i++) block_num[i]=47;
+        for(int i=18;i<49;i++) block_num[i]=48;
+        unsigned short* data=get_data(code,49,block_num,28,3706);
+        QRmatrix Q(177);
+        const int center[]={6,30,58,86,114,142,170};
+        Q.draw_centers(7,center);
+        const bool version_msg[]={1,0,1,0,0,0,1,1,0,0,0,1,1,0,1,0,0,1};
+        Q.draw_version(version_msg);
+        Q.draw_data(data,3706);
+        int maskid=Q.masking();
+        bool format_msg[15];
+        addcode(format_msg,5,maskid);
+        bool* bch=BCHcode::encode(format_msg);
+        Q.draw_format(bch);
+        Q.draw();
     }
 }

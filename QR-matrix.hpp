@@ -10,9 +10,13 @@ struct QRmatrix
     bool** notdata;
     QRmatrix(){}
     void forbid(int x,int y,int r,int c);
+    void unforbid(int x,int y,int r,int c);
     void draw_position(int x,int y);
+    void draw_center(int x,int y);
     void nextpos(int &x,int &y,int &p);
     void draw_timing();
+    void draw_centers(int n,const int *centers);
+    void draw_version(const bool* version_msg);
     void draw_format(bool* format_msg);
     void draw_data(unsigned short* data,int len);
     void mask_with(bool calc(int,int));
@@ -51,6 +55,37 @@ void QRmatrix::draw_position(int x,int y)
     A[x+3][y+3]=1;
 }
 
+void QRmatrix::draw_center(int x,int y)
+{
+    forbid(x-2,y-2,5,5);
+    for(int i=0;i<5;i++)
+        A[x-2+i][y-2]=A[x-2][y-2+i]=A[x+2][y-2+i]=A[x-2+i][y+2]=1;
+    for(int i=0;i<3;i++)
+        A[x-1+i][y-1]=A[x-1][y-1+i]=A[x+1][y-1+i]=A[x-1+i][y+1]=0;
+    A[x][y]=1;
+}
+
+void QRmatrix::draw_centers(int n,const int *centers)
+{
+    for(int i=1;i<n-1;i++)
+        draw_center(centers[0],centers[i]);
+    for(int i=1;i<n-1;i++)
+        for(int j=0;j<n;j++)
+            draw_center(centers[i],centers[j]);
+    for(int i=1;i<n;i++)
+        draw_center(centers[n-1],centers[i]);
+}
+
+void QRmatrix::draw_version(const bool* version_msg)
+{
+    int it=17;
+    for(int j=0;j<6;j++)
+        for(int i=0;i<3;i++)
+            A[n-11+i][j]=A[j][n-11+i]=version_msg[it--];
+    forbid(n-11,0,3,6);
+    forbid(0,n-11,6,3);
+}
+
 void QRmatrix::draw_timing()
 {
     bool p=1;
@@ -66,6 +101,13 @@ void QRmatrix::forbid(int x,int y,int r,int c)
     for(int i=0;i<r;i++)
         for(int j=0;j<c;j++)
             notdata[x+i][y+j]=1;
+}
+
+void QRmatrix::unforbid(int x,int y,int r,int c)
+{
+    for(int i=0;i<r;i++)
+        for(int j=0;j<c;j++)
+            notdata[x+i][y+j]=0;
 }
 
 void QRmatrix::display()
