@@ -6,11 +6,11 @@ using namespace std;
 
 int main()
 {
-    static char input[3000];
+    static unsigned char input[3000];
     freopen("input.txt","r",stdin);
-    char c=getchar();
+    unsigned char c=getchar();
     int n=0;
-    while(c!=EOF)
+    while(c!=255)
         input[n++]=c,c=getchar();
     freopen("CON","r",stdin);
     if(n<=17) QRcode::version_1L(input);

@@ -20,7 +20,7 @@ namespace QRcode
             s[i]=code[i]-'0';
     }
 
-    unsigned short* encode(int indicator_bits,int bits_len,char* input)
+    unsigned short* encode(int indicator_bits,int bits_len,unsigned char* input)
     {
         static bool* bits;
         static unsigned short* code;
@@ -28,7 +28,8 @@ namespace QRcode
         bits=new bool[8*code_len];
         code=new unsigned short[code_len];
         addcode(bits,"0100");
-        int n=strlen(input);
+        int n=0;
+        while(input[n]) n++;
         for(int i=0;i<indicator_bits;i++)
             bits[3+indicator_bits-i]=(n>>i)&1;
         for(int i=0;i<n;i++)
@@ -78,7 +79,7 @@ namespace QRcode
         return data;
     }
 
-    void version_1L(char* input)
+    void version_1L(unsigned char* input)
     {
         unsigned short* code=encode(8,17,input);
         RScode::Galois_init(285,8);
@@ -94,7 +95,7 @@ namespace QRcode
         Q.draw();
     }
 
-    void version_7H(char *input)
+    void version_7H(unsigned char *input)
     {
         unsigned short* code=encode(8,64,input);
         RScode::Galois_init(285,8);
@@ -114,7 +115,7 @@ namespace QRcode
         Q.draw();
     }
 
-    void version_10Q(char* input)
+    void version_10Q(unsigned char* input)
     {
         unsigned short* code=encode(16,151,input);
         RScode::Galois_init(285,8);
@@ -134,7 +135,7 @@ namespace QRcode
         Q.draw();
     }
 
-    void version_15Q(char* input)
+    void version_15Q(unsigned char* input)
     {
         unsigned short* code=encode(16,292,input);
         RScode::Galois_init(285,8);
@@ -154,7 +155,7 @@ namespace QRcode
         Q.draw();
     }
 
-    void version_40M(char* input)
+    void version_40M(unsigned char* input)
     {
         unsigned short* code=encode(16,2331,input);
         RScode::Galois_init(285,8);
