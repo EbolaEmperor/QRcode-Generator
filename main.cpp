@@ -38,6 +38,7 @@ int main()
     errF=NULL;
 
     if(errLevel=='L') QRcode::workL(input,n);
+    if(errLevel=='M') QRcode::workM(input,n);
     puts("success! Please open code.png");
     std::cin.get();
     fflush(stdin);
