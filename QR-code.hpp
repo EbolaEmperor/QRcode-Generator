@@ -82,87 +82,17 @@ namespace QRcode
         return data;
     }
 
-    void version_5H(unsigned char *input)
-    {
-        unsigned short* code=encode(8,44,input);
-        RScode::Galois_init(285,8);
-        const int block_num[]={11,11,12,12};
-        unsigned short* data=get_data(code,4,block_num,22,134);
-        QRmatrix Q(37);
-        const int center[]={6,30};
-        Q.draw_centers(2,center);
-        Q.draw_data(data,134);
-        int maskid=Q.masking();
-        bool format_msg[15];
-        addcode(format_msg,5,2<<3|maskid);
-        bool* bch=BCHcode::encode(format_msg);
-        Q.draw_format(bch);
-        Q.draw();
-    }
-
-    void version_7H(unsigned char *input)
-    {
-        unsigned short* code=encode(8,64,input);
-        RScode::Galois_init(285,8);
-        const int block_num[]={13,13,13,13,14};
-        unsigned short* data=get_data(code,5,block_num,26,196);
-        QRmatrix Q(45);
-        const int center[]={6,22,38};
-        Q.draw_centers(3,center);
-        const bool version_msg[]={0,0,0,1,1,1,1,1,0,0,1,0,0,1,0,1,0,0};
-        Q.draw_version(version_msg);
-        Q.draw_data(data,196);
-        int maskid=Q.masking();
-        bool format_msg[15];
-        addcode(format_msg,5,2<<3|maskid);
-        bool* bch=BCHcode::encode(format_msg);
-        Q.draw_format(bch);
-        Q.draw();
-    }
-
-    void version_10Q(unsigned char* input)
-    {
-        unsigned short* code=encode(16,151,input);
-        RScode::Galois_init(285,8);
-        const int block_num[]={19,19,19,19,19,19,20,20};
-        unsigned short* data=get_data(code,8,block_num,24,346);
-        QRmatrix Q(57);
-        const int center[]={6,28,50};
-        Q.draw_centers(3,center);
-        const bool version_msg[]={0,0,1,0,1,0,0,1,0,0,1,1,0,1,0,0,1,1};
-        Q.draw_version(version_msg);
-        Q.draw_data(data,346);
-        int maskid=Q.masking();
-        bool format_msg[15];
-        addcode(format_msg,5,3<<3|maskid);
-        bool* bch=BCHcode::encode(format_msg);
-        Q.draw_format(bch);
-        Q.draw();
-    }
-
-    void version_15Q(unsigned char* input)
-    {
-        unsigned short* code=encode(16,292,input);
-        RScode::Galois_init(285,8);
-        const int block_num[]={24,24,24,24,24,25,25,25,25,25,25,25};
-        unsigned short* data=get_data(code,12,block_num,30,655);
-        QRmatrix Q(77);
-        const int center[]={6,26,48,70};
-        Q.draw_centers(4,center);
-        const bool version_msg[]={0,0,1,1,1,1,1,0,0,1,0,0,1,0,1,0,0,0};
-        Q.draw_version(version_msg);
-        Q.draw_data(data,655);
-        int maskid=Q.masking();
-        bool format_msg[15];
-        addcode(format_msg,5,3<<3|maskid);
-        bool* bch=BCHcode::encode(format_msg);
-        Q.draw_format(bch);
-        Q.draw();
-    }
-
     void workL(unsigned char* input,int n)
     {
         using namespace errLevelL;
+        if(n>msgLen[39]-3)
+        {
+            puts("Message is too long!");
+            puts("Tip.  Sorry, QR-code can't include your message.");
+            std::cin.get();
+            fflush(stdin);
+            exit(0);
+        }
         int idx=0,indiLen=1;
         while(msgLen[idx]-indiLen-1<n)
         {
@@ -206,6 +136,14 @@ namespace QRcode
     void workM(unsigned char* input,int n)
     {
         using namespace errLevelM;
+        if(n>msgLen[39]-3)
+        {
+            puts("Message is too long!");
+            puts("Tip.  You can try a lower error correction level. (L)");
+            std::cin.get();
+            fflush(stdin);
+            exit(0);
+        }
         int idx=0,indiLen=1;
         while(msgLen[idx]-indiLen-1<n)
         {
@@ -241,6 +179,108 @@ namespace QRcode
         int maskid=Q.masking();
         bool format_msg[15];
         addcode(format_msg,5,0<<3|maskid);
+        bool* bch=BCHcode::encode(format_msg);
+        Q.draw_format(bch);
+        Q.draw();
+    }
+
+    void workQ(unsigned char* input,int n)
+    {
+        using namespace errLevelQ;
+        if(n>msgLen[39]-3)
+        {
+            puts("Message is too long!");
+            puts("Tip.  You can try a lower error correction level. (L or M)");
+            std::cin.get();
+            fflush(stdin);
+            exit(0);
+        }
+        int idx=0,indiLen=1;
+        while(msgLen[idx]-indiLen-1<n)
+        {
+            idx++;
+            if(idx==10) indiLen++;
+        }
+        RScode::Galois_init(285,8);
+        unsigned short* code=encode(8*indiLen,msgLen[idx]-1-indiLen,input);
+        int block_num[100];
+        int shortLen=msgLen[idx]/blockNum[idx];
+        int shortNum=blockNum[idx]*(shortLen+1)-msgLen[idx];
+        for(int i=0;i<shortNum;i++) block_num[i]=shortLen;
+        for(int i=shortNum;i<blockNum[idx];i++) block_num[i]=shortLen+1;
+        unsigned short* data=get_data(code,blockNum[idx],block_num,rscLen[idx],codeLen[idx]);
+        printf("version: %d\n",idx+1);
+        printf("error correction level: Q\n");
+        QRmatrix Q(21+4*idx);
+        if(idx>=1)
+        {
+            int center[7];
+            int centerNum=alig[idx][0];
+            for(int i=0;i<centerNum;i++)
+                center[i]=alig[idx][i+1];
+            Q.draw_centers(centerNum,center);
+        }
+        if(idx>=6)
+        {
+            bool version_msg[18];
+            addcode(version_msg,18,versionInfo[idx]);
+            Q.draw_version(version_msg);
+        }
+        Q.draw_data(data,codeLen[idx]);
+        int maskid=Q.masking();
+        bool format_msg[15];
+        addcode(format_msg,5,3<<3|maskid);
+        bool* bch=BCHcode::encode(format_msg);
+        Q.draw_format(bch);
+        Q.draw();
+    }
+
+    void workH(unsigned char* input,int n)
+    {
+        using namespace errLevelH;
+        if(n>msgLen[39]-3)
+        {
+            puts("Message is too long!");
+            puts("Tip.  You can try a lower error correction level. (L, M, or Q)");
+            std::cin.get();
+            fflush(stdin);
+            exit(0);
+        }
+        int idx=0,indiLen=1;
+        while(msgLen[idx]-indiLen-1<n)
+        {
+            idx++;
+            if(idx==10) indiLen++;
+        }
+        RScode::Galois_init(285,8);
+        unsigned short* code=encode(8*indiLen,msgLen[idx]-1-indiLen,input);
+        int block_num[100];
+        int shortLen=msgLen[idx]/blockNum[idx];
+        int shortNum=blockNum[idx]*(shortLen+1)-msgLen[idx];
+        for(int i=0;i<shortNum;i++) block_num[i]=shortLen;
+        for(int i=shortNum;i<blockNum[idx];i++) block_num[i]=shortLen+1;
+        unsigned short* data=get_data(code,blockNum[idx],block_num,rscLen[idx],codeLen[idx]);
+        printf("version: %d\n",idx+1);
+        printf("error correction level: H\n");
+        QRmatrix Q(21+4*idx);
+        if(idx>=1)
+        {
+            int center[7];
+            int centerNum=alig[idx][0];
+            for(int i=0;i<centerNum;i++)
+                center[i]=alig[idx][i+1];
+            Q.draw_centers(centerNum,center);
+        }
+        if(idx>=6)
+        {
+            bool version_msg[18];
+            addcode(version_msg,18,versionInfo[idx]);
+            Q.draw_version(version_msg);
+        }
+        Q.draw_data(data,codeLen[idx]);
+        int maskid=Q.masking();
+        bool format_msg[15];
+        addcode(format_msg,5,2<<3|maskid);
         bool* bch=BCHcode::encode(format_msg);
         Q.draw_format(bch);
         Q.draw();

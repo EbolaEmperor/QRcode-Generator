@@ -38,7 +38,17 @@ int main()
     errF=NULL;
 
     if(errLevel=='L') QRcode::workL(input,n);
-    if(errLevel=='M') QRcode::workM(input,n);
+    else if(errLevel=='M') QRcode::workM(input,n);
+    else if(errLevel=='Q') QRcode::workQ(input,n);
+    else if(errLevel=='H') QRcode::workH(input,n);
+    else
+    {
+        puts("Please set a correct error correction level in config.ini.");
+        puts("Tip.  The error correction level should be a single letter L, M, Q, or H.");
+        std::cin.get();
+        fflush(stdin);
+        return 0;
+    }
     puts("success! Please open code.png");
     std::cin.get();
     fflush(stdin);
