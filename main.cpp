@@ -11,8 +11,6 @@ int main()
     if(inF==NULL)
     {
         puts("input.txt needed.");
-        std::cin.get();
-        fflush(stdin);
         return 0;
     }
     unsigned char c=getc(inF);
@@ -29,8 +27,6 @@ int main()
     if(errF==NULL)
     {
         puts("config.ini needed.");
-        std::cin.get();
-        fflush(stdin);
         return 0;
     }
     errLevel=getc(errF);
@@ -45,12 +41,7 @@ int main()
     {
         puts("Please set a correct error correction level in config.ini.");
         puts("Tip.  The error correction level should be a single letter L, M, Q, or H.");
-        std::cin.get();
-        fflush(stdin);
         return 0;
     }
-    puts("success! Please open code.png");
-    std::cin.get();
-    fflush(stdin);
     return 0;
 }
