@@ -1,39 +1,40 @@
 #include<algorithm>
 #include "Galois.hpp"
+#include "Matrix.hpp"
 
 namespace RScode
 {
     using namespace GaloisSP;
 
-    unsigned short* encode(unsigned short* msg,int msg_len,int rscode_len)
+    unsigned short* encode(unsigned short* msg, int msg_len, int rscode_len)
     //生成RS纠错码
     //注意信息的排列顺序是Msg=(mn,...,m2,m1)，RS码的排列顺序是RSC=(Qk,...,Q2,Q1)，因此要注意数组翻转问题
     {
-        Galois** A;
-        A=new Galois* [rscode_len];
-        for(int i=0;i<rscode_len;i++)
-            A[i]=new Galois[rscode_len+1];
-        for(int i=0;i<rscode_len;i++)
+        Matrix<Galois> A(rscode_len, rscode_len);
+        std::vector<Galois> b(rscode_len);
+        
+        for (int i = 0; i < rscode_len; i++)
         {
-            Galois t,w(1);t.x=i;
-            for(int j=0;j<rscode_len;j++)
-                A[i][j]=w,w=w*t;
-            A[i][rscode_len]=Galois(0);
-            for(int j=0;j<msg_len;j++)
+            Galois t, w(1);
+            t.x = i;
+            for (int j = 0; j < rscode_len; j++)
             {
-                A[i][rscode_len]=A[i][rscode_len]+w*Galois(msg[msg_len-1-j]);
-                w=w*t;
+                A(i, j) = w;
+                w = w * t;
+            }
+            b[i] = Galois(0);
+            for (int j = 0; j < msg_len; j++)
+            {
+                b[i] = b[i] + w * Galois(msg[msg_len - 1 - j]);
+                w = w * t;
             }
         }
-        bool fail;  //事实上，这里不可能fail
-        Galois* ans=Gauss(A,rscode_len,fail);
-        for(int i=0;i<rscode_len;i++)
-            delete A[i];
-        delete A;
-        unsigned short* res=new unsigned short[rscode_len];
-        for(int i=0;i<rscode_len;i++)
-            res[i]=ans[rscode_len-1-i].toint();
-        delete ans;
+        auto ans = A.solve(b);
+        
+        unsigned short* res = new unsigned short[rscode_len];
+        for (int i = 0; i < rscode_len; i++)
+            res[i] = ans[rscode_len - 1 - i].toint();
+        
         return res;
     }
 
@@ -56,11 +57,13 @@ namespace RScode
     {
         int n;
         Galois *c;
-        Poly(){n=0;}
+        Poly() { n = 0; c = nullptr; }
         Poly(int _n)
         {
-            n=_n;
-            c=new Galois[n];
+            n = _n;
+            c = new Galois[n];
+            for (int i = 0; i < n; i++)
+                c[i] = Galois(0);
         }
         Galois get(Galois x)
         {
@@ -94,24 +97,29 @@ namespace RScode
         if(allright) return fail=0,corrected;
         
         //第二步：计算定位多项式，并确定错误位置
-        Galois** A;
-        A=new Galois* [error_num];
-        for(int i=0;i<error_num;i++)
-            A[i]=new Galois[error_num+1];
-        for(int i=0;i<error_num;i++)
-            for(int j=0;j<=error_num;j++)
-                A[i][j]=S[i+j];
-        Galois* lam=Gauss(A,error_num,fail);
-        for(int i=0;i<error_num;i++)
-            delete A[i];
-        delete A;
-        if(fail) return corrected;  //错误太多
+        Matrix<Galois> A(error_num, error_num);
+        std::vector<Galois> b(error_num);
+        
+        for (int i = 0; i < error_num; i++)
+        {
+            for (int j = 0; j < error_num; j++)
+                A(i, j) = S[i + j];
+            b[i] = S[i + error_num];
+        }
+        
+        std::vector<Galois> lam;
+        try {
+            lam = A.solve(b);
+        }
+        catch (const std::exception& e) {
+            fail = true;
+            return corrected;  //错误太多
+        }
 
-        Poly Lambda(error_num+1);
-        Lambda.c[0]=1;
-        for(int i=1;i<=error_num;i++)
-            Lambda.c[i]=lam[error_num-i];
-        delete lam;
+        Poly Lambda(error_num + 1);
+        Lambda.c[0] = Galois(1);
+        for (int i = 1; i <= error_num; i++)
+            Lambda.c[i] = lam[error_num - i];
         Galois* errorp;
         int cnt=0;
         for(int i=0;i<code_len;i++)
@@ -134,29 +142,37 @@ namespace RScode
         delete Lambda.c;
 
         //第三步：计算错误值
-        Galois** B;
-        B=new Galois* [rsc_len];
-        for(int i=0;i<rsc_len;i++)
-            B[i]=new Galois[cnt+1];
-        for(int j=0;j<cnt;j++)
+        Matrix<Galois> B(rsc_len, cnt);
+        std::vector<Galois> b_vec(rsc_len);
+        
+        for (int j = 0; j < cnt; j++)
         {
             Galois w(1);
-            for(int i=0;i<rsc_len;i++)
-                B[i][j]=w,w=w*errorp[j];
+            for (int i = 0; i < rsc_len; i++)
+            {
+                B(i, j) = w;
+                w = w * errorp[j];
+            }
         }
-        for(int i=0;i<rsc_len;i++)
-            B[i][cnt]=S[i];
-        Galois* errorv=Gauss(B,rsc_len,cnt,fail);
+        for (int i = 0; i < rsc_len; i++)
+            b_vec[i] = S[i];
         
-        for(int i=0;i<rsc_len;i++)
-            delete B[i];
-        delete B;
+        std::vector<Galois> errorv;
+        try {
+            errorv = B.solve(b_vec);
+        }
+        catch (const std::exception& e) {
+            fail = true;
+            delete S;
+            delete errorp;
+            return corrected;
+        }
+        
         delete S;
         
-        for(int i=0;i<cnt;i++)
-            corrected[code_len-1-errorp[i].x]=(r.c[errorp[i].x]-errorv[i]).toint();
+        for (int i = 0; i < cnt; i++)
+            corrected[code_len - 1 - errorp[i].x] = (r.c[errorp[i].x] - errorv[i]).toint();
         delete errorp;
-        delete errorv;
         return corrected;
     }
 

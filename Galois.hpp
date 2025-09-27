@@ -12,18 +12,22 @@ namespace GaloisSP
     {
         unsigned short x;    //在Galois域中，这个数可以表示为a^x，x=65535表示这个数为0
         Galois(unsigned short _x = 0) { x = iflog[_x]; }    //将一个二进制数转换为Galois域中的a^x表示法
-        unsigned short toint() { return x == 65535 ? 0 : flog[x]; }
-        Galois operator + (const Galois &b)
+        unsigned short toint() const { return x == 65535 ? 0 : flog[x]; }
+        
+        bool operator == (const Galois &b) const { return x == b.x; }
+        bool operator != (const Galois &b) const { return x != b.x; }
+        
+        Galois operator + (const Galois &b) const
         {
             if (x == 65535) return b;
             else if (b.x == 65535) return (*this);
             else return Galois(flog[x] ^ flog[b.x]);
         }
-        Galois operator - (const Galois &b)
+        Galois operator - (const Galois &b) const
         {
             return (*this) + b;
         }
-        Galois operator * (const Galois &b)
+        Galois operator * (const Galois &b) const
         {
             if (x == 65535 || b.x == 65535)
                 return Galois(0);
@@ -31,7 +35,7 @@ namespace GaloisSP
             res.x = (x + b.x) % mx;
             return res;
         }
-        Galois operator / (const Galois &b)
+        Galois operator / (const Galois &b) const
         {
             if (x == 65535) return Galois(0);
             Galois res;
@@ -94,35 +98,5 @@ namespace GaloisSP
         memset(flog, 0, sizeof(flog));
         memset(iflog, 0, sizeof(iflog));
         mx = 0;
-    }
-
-    Galois* Gauss(Galois** A, int m, int n, bool& fail)
-    //高斯消元求解Galois域中的线性方程组
-    {
-        Galois* ans;
-        for (int i = 0; i < n; i++)
-        {
-            int p = i;
-            while (p < m && A[p][i].x == 65535) p++;
-            if (p == m) return fail = 1, ans;            
-            if (p != i)
-                for (int j = 0; j <= n; j++)
-                    std::swap(A[i][j], A[p][j]);
-            for (int j = 0; j < m; j++)
-            {
-                if (i == j || A[j][i].x == 65535) continue;
-                Galois t = A[j][i] / A[i][i];
-                for (int k = i; k <= n; k++)
-                    A[j][k] = A[j][k] - t * A[i][k];
-            }
-        }
-        ans = new Galois[n];
-        for (int i = 0; i < n; i++)
-            ans[i] = A[i][n] / A[i][i];
-        return fail = 0, ans;
-    }
-    Galois* Gauss(Galois** A, int n, bool& fail)
-    {
-        return Gauss(A, n, n, fail);
     }
 }
