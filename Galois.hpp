@@ -42,6 +42,12 @@ namespace GaloisSP
             res.x = (x - b.x + mx) % mx;
             return res;
         }
+
+        friend std::ostream& operator << (std::ostream &out, const Galois &g)
+        {
+            out << g.toint();
+            return out;
+        }
     };
 
     void Galois_init(int origin, int len)

@@ -134,6 +134,14 @@ public:
             result.data[i][i] = T(1);
         return result;
     }
+
+    T trace() const
+    {
+        T tr = T(0);
+        for (int i = 0; i < rows; i++)
+            tr = tr + data[i][i];
+        return tr;
+    }
     
     // 矩阵快速幂
     Matrix power(int exp) const
@@ -216,12 +224,8 @@ public:
     {
         Matrix result(cols, rows);
         for (int i = 0; i < rows; i++)
-        {
             for (int j = 0; j < cols; j++)
-            {
                 result.data[j][i] = data[i][j];
-            }
-        }
         return result;
     }
     
