@@ -4,8 +4,8 @@
 
 namespace GaloisSP
 {
-    unsigned short flog[256];   //a^i 对应的二进制数
-    unsigned short iflog[256];   //二进制数对应的a的幂次
+    std::vector<unsigned short> flog;   // a^i 对应的二进制数
+    std::vector<unsigned short> iflog;  // 二进制数对应的a的幂次
     int mx;
     
     struct Galois
@@ -13,6 +13,7 @@ namespace GaloisSP
         unsigned short x;    //在Galois域中，这个数可以表示为a^x，x=65535表示这个数为0
         Galois(unsigned short _x = 0) { x = iflog[_x]; }    //将一个二进制数转换为Galois域中的a^x表示法
         unsigned short toint() const { return x == 65535 ? 0 : flog[x]; }
+        operator unsigned short() const { return toint(); }
         
         bool operator == (const Galois &b) const { return x == b.x; }
         bool operator != (const Galois &b) const { return x != b.x; }
@@ -53,6 +54,8 @@ namespace GaloisSP
     void Galois_init(int origin, int len)
     //初始化一个Galois域: GP(2^len),  其中origin是本原多项式系数的二进制表示
     {
+        flog.resize(1 << len);
+        iflog.resize(1 << len);
         flog[0] = 1;
         iflog[1] = 0;
         iflog[0] = 65535;  //65535表示0值，此时不能被表示为a^x的形式
@@ -101,8 +104,8 @@ namespace GaloisSP
 
     void Galois_clear()
     {
-        memset(flog, 0, sizeof(flog));
-        memset(iflog, 0, sizeof(iflog));
+        flog.clear();
+        iflog.clear();
         mx = 0;
     }
 }
